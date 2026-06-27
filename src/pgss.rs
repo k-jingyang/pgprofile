@@ -25,16 +25,18 @@ pub fn snapshot(client: &mut postgres::Client, caps: &Capabilities) -> Result<Ve
 
     Ok(rows
         .iter()
-        .map(|r| {
+        .filter_map(|r| {
+            // queryid is NULL for utility statements and some internal queries — skip them.
+            let queryid = r.try_get::<_, i64>("queryid").ok()?;
             let wal_bytes: Option<i64> = if caps.columns.contains(&"wal_bytes".to_string()) {
-                r.get("wal_bytes")
+                r.try_get::<_, f64>("wal_bytes").ok().map(|v| v as i64)
             } else {
                 None
             };
-            Row {
+            Some(Row {
                 userid: r.get::<_, i64>("userid"),
                 dbid: r.get::<_, i64>("dbid"),
-                queryid: r.get::<_, i64>("queryid"),
+                queryid,
                 toplevel: r.get::<_, bool>("toplevel"),
                 total_exec_time: r.get::<_, f64>("total_exec_time"),
                 calls: r.get::<_, i64>("calls"),
@@ -44,7 +46,7 @@ pub fn snapshot(client: &mut postgres::Client, caps: &Capabilities) -> Result<Ve
                 temp_blks_read: r.get::<_, i64>("temp_blks_read"),
                 temp_blks_written: r.get::<_, i64>("temp_blks_written"),
                 wal_bytes,
-            }
+            })
         })
         .collect())
 }
@@ -60,7 +62,8 @@ pub fn fetch_query_text(client: &mut postgres::Client, queryid: i64) -> Result<O
 }
 
 fn build_query(caps: &Capabilities) -> String {
-    // Use PG17+ renamed columns (shared_blk_read_time, etc.) if present; fall back
+    // userid/dbid are OID (26); queryid is INT8 (20) — all read natively by rust-postgres.
+    // wal_bytes is NUMERIC — convert via float cast.
     let exec_time_col = if caps.columns.contains(&"total_exec_time".to_string()) {
         "total_exec_time"
     } else {
@@ -68,16 +71,16 @@ fn build_query(caps: &Capabilities) -> String {
     };
 
     let wal_col = if caps.columns.contains(&"wal_bytes".to_string()) {
-        ", wal_bytes"
+        ", wal_bytes::float8 AS wal_bytes"
     } else {
         ""
     };
 
     format!(
-        "SELECT userid::bigint, dbid::bigint, queryid::bigint, toplevel, \
-         {exec_time_col}, calls::bigint, rows::bigint, \
-         shared_blks_hit::bigint, shared_blks_read::bigint, \
-         temp_blks_read::bigint, temp_blks_written::bigint{wal_col} \
+        "SELECT userid::bigint, dbid::bigint, queryid, toplevel, \
+         {exec_time_col}, calls, rows, \
+         shared_blks_hit, shared_blks_read, \
+         temp_blks_read, temp_blks_written{wal_col} \
          FROM pg_stat_statements(showtext := false)"
     )
 }

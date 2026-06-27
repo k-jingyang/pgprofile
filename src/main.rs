@@ -66,10 +66,45 @@ fn run_info(connstr: &str) -> pgprofile::Result<()> {
     Ok(())
 }
 
+fn run_query(connstr: &str, columns_only: bool, rows: usize) -> pgprofile::Result<()> {
+    let mut client = postgres::Client::connect(connstr, postgres::NoTls)
+        .map_err(pgprofile::PgprofileError::Connection)?;
+    let caps = pgprofile::capability::detect(&mut client)?;
+
+    if !caps.pgss_present {
+        return Err(pgprofile::PgprofileError::PgssNotInstalled);
+    }
+
+    if columns_only {
+        println!("Columns in pg_stat_statements ({}):", caps.columns.len());
+        for col in &caps.columns {
+            println!("  {col}");
+        }
+        return Ok(());
+    }
+
+    let snapshot = pgprofile::pgss::snapshot(&mut client, &caps)?;
+    let display: Vec<_> = snapshot.into_iter().take(rows).collect();
+
+    println!("{} rows (showing up to {rows}):", display.len());
+    for row in &display {
+        println!(
+            "  queryid={} calls={} total_exec={:.2}ms rows={}",
+            row.queryid, row.calls, row.total_exec_time, row.rows
+        );
+    }
+    Ok(())
+}
+
 fn main() {
     let cli = Cli::parse();
     match cli.command {
-        Command::Query { .. } => eprintln!("query: not yet implemented"),
+        Command::Query { connstr, columns, rows } => {
+            if let Err(e) = run_query(&connstr, columns, rows) {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+        },
         Command::Profile { .. } => eprintln!("profile: not yet implemented"),
         Command::Info { connstr } => {
             if let Err(e) = run_info(&connstr) {
