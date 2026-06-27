@@ -48,11 +48,34 @@ fn parse_duration(s: &str) -> std::result::Result<std::time::Duration, String> {
     humantime::parse_duration(s).map_err(|e| e.to_string())
 }
 
+fn run_info(connstr: &str) -> pgprofile::Result<()> {
+    let mut client = postgres::Client::connect(connstr, postgres::NoTls)
+        .map_err(pgprofile::PgprofileError::Connection)?;
+
+    let version = pgprofile::capability::server_version(&mut client)?;
+    let caps = pgprofile::capability::detect(&mut client)?;
+
+    println!("Server:              {}", version);
+    println!("pg_stat_statements:  {}", if caps.pgss_present { "installed" } else { "NOT FOUND" });
+    println!("pg_read_all_stats:   {}", if caps.can_read_all_stats { "yes (full query text)" } else { "no (limited to own queries)" });
+    println!("stats_since (PG16+): {}", if caps.has_stats_since { "yes" } else { "no" });
+    println!("Columns detected:    {}", caps.columns.len());
+    if !caps.columns.is_empty() {
+        println!("  {}", caps.columns.join(", "));
+    }
+    Ok(())
+}
+
 fn main() {
     let cli = Cli::parse();
     match cli.command {
         Command::Query { .. } => eprintln!("query: not yet implemented"),
         Command::Profile { .. } => eprintln!("profile: not yet implemented"),
-        Command::Info { .. } => eprintln!("info: not yet implemented"),
+        Command::Info { connstr } => {
+            if let Err(e) = run_info(&connstr) {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+        },
     }
 }
