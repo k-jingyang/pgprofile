@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::io::Write;
-use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
+use crossterm::{cursor, terminal, ExecutableCommand};
+#[allow(unused_imports)]
+use crossterm::QueueableCommand;
 
 use crate::acc::{AccEntry, Key};
 
