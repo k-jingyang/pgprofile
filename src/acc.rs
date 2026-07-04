@@ -35,7 +35,7 @@ impl Acc {
                     shared_blks_read: cur_row.shared_blks_read - prev_row.shared_blks_read,
                     temp_blks_read: cur_row.temp_blks_read - prev_row.temp_blks_read,
                     temp_blks_written: cur_row.temp_blks_written - prev_row.temp_blks_written,
-                    wal_bytes: cur_row.wal_bytes,
+                    wal_bytes: cur_row.wal_bytes.zip(prev_row.wal_bytes).map(|(c, p)| c - p),
                 },
                 // regression guard: eviction or reset — use cur as delta
                 _ => AccEntry {
@@ -92,6 +92,10 @@ mod tests {
         }
     }
 
+    fn make_row_with_wal(queryid: i64, calls: i64, wal_bytes: i64) -> Row {
+        Row { wal_bytes: Some(wal_bytes), ..make_row(queryid, calls, 0.0) }
+    }
+
     #[test]
     fn test_accumulates_delta() {
         let mut acc = Acc::new();
@@ -101,6 +105,26 @@ mod tests {
         let key = (10, 20, 1, true);
         assert_eq!(acc.entries[&key].calls, 5);
         assert!((acc.entries[&key].total_exec_time - 50.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_wal_bytes_accumulates_as_delta_not_raw_cumulative() {
+        let mut acc = Acc::new();
+        let key = (10, 20, 1, true);
+
+        // Baseline: query already has 1000 cumulative wal_bytes before capture starts.
+        let mut prev = rows_to_map(vec![make_row_with_wal(1, 1, 1000)]);
+
+        // Tick 1: cumulative rises to 1500 — true new WAL this tick is 500.
+        let cur1 = rows_to_map(vec![make_row_with_wal(1, 2, 1500)]);
+        acc.tick(&prev, &cur1);
+        prev = cur1;
+
+        // Tick 2: no new calls, cumulative unchanged — true new WAL this tick is 0.
+        let cur2 = rows_to_map(vec![make_row_with_wal(1, 2, 1500)]);
+        acc.tick(&prev, &cur2);
+
+        assert_eq!(acc.entries[&key].wal_bytes, Some(500));
     }
 
     #[test]
