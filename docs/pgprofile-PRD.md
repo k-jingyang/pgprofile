@@ -8,7 +8,7 @@ A bounded, on-demand Postgres query profiler that reconstructs pgbadger-style "w
 
 ## Problem
 
-pgbadger-style query profiling depends on log parsing via `log_min_duration_statement`. That is impractical on CloudNativePG (log streams trapped in pods), and everywhere it means config changes, overhead, and often a restart. Operators need to profile query performance on a *running* cluster they may not control, without touching server configuration.
+pgbadger-style query profiling depends on log parsing via `log_min_duration_statement`. That is impractical on CloudNativePG (log streams trapped in pods), and everywhere it means config changes, log volume overhead, and file handling. Operators need to profile query performance on a *running* cluster they may not control, without touching server configuration.
 
 ## Users
 
@@ -17,7 +17,7 @@ DBAs and platform/application engineers diagnosing query performance during an i
 ## Goals
 
 - `perf record` / `perf report` shape: start, capture over a workload, stop, get a ranked report.
-- Zero-install: works against any cluster where stock `pg_stat_statements` is present — no preload beyond that, no restart, no superuser.
+- Zero-install: works against any cluster where stock `pg_stat_statements` is present — no preload beyond that, no superuser.
 - One connection string, one instance; identical behavior on CNPG and plain Postgres.
 - A live preview during capture that doubles as a "is it working / roughly what's hot" view.
 
