@@ -2,6 +2,8 @@
 name = "pgprofile"
 version = "0.1.0"
 edition = "2021"
+license = "PostgreSQL"
+repository = "https://github.com/k-jingyang/pgprofile"
 
 [[bin]]
 name = "pgprofile"
@@ -18,3 +20,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [dev-dependencies]
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
