@@ -12,4 +12,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `query` subcommand for a one-shot dynamic snapshot of `pg_stat_statements`, with a guard against rows carrying a NULL `queryid`.
 - `profile` subcommand: a capture loop with live terminal preview and a final report, driven by an accumulator that guards against regressions on eviction.
 - Report renderer with table, TSV, and JSON output formats.
-- Packaging via `cargo-dist` for GitHub release binaries (macOS arm64/x86_64, Linux x86_64).
