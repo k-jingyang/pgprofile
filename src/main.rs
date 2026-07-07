@@ -150,12 +150,12 @@ fn run_profile(
 
         let cur_rows = pgss::snapshot(&mut client, &caps)?;
 
-        for row in &cur_rows {
-            if !text_cache.contains_key(&row.queryid) {
-                if let Ok(Some(text)) = pgss::fetch_query_text(&mut client, row.queryid) {
-                    text_cache.insert(row.queryid, text);
-                }
-            }
+        let uncached: Vec<i64> = cur_rows.iter()
+            .map(|r| r.queryid)
+            .filter(|id| !text_cache.contains_key(id))
+            .collect();
+        if let Ok(texts) = pgss::fetch_query_texts(&mut client, &uncached) {
+            text_cache.extend(texts);
         }
 
         let cur = rows_to_map(cur_rows);
@@ -175,12 +175,12 @@ fn run_profile(
 
     // Final snapshot + bank
     let final_rows = pgss::snapshot(&mut client, &caps)?;
-    for row in &final_rows {
-        if !text_cache.contains_key(&row.queryid) {
-            if let Ok(Some(text)) = pgss::fetch_query_text(&mut client, row.queryid) {
-                text_cache.insert(row.queryid, text);
-            }
-        }
+    let uncached: Vec<i64> = final_rows.iter()
+        .map(|r| r.queryid)
+        .filter(|id| !text_cache.contains_key(id))
+        .collect();
+    if let Ok(texts) = pgss::fetch_query_texts(&mut client, &uncached) {
+        text_cache.extend(texts);
     }
     let final_cur = rows_to_map(final_rows);
     acc.tick(&prev, &final_cur);

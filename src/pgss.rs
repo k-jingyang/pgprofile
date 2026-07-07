@@ -51,14 +51,23 @@ pub fn snapshot(client: &mut postgres::Client, caps: &Capabilities) -> Result<Ve
         .collect())
 }
 
-pub fn fetch_query_text(client: &mut postgres::Client, queryid: i64) -> Result<Option<String>> {
+pub fn fetch_query_texts(
+    client: &mut postgres::Client,
+    queryids: &[i64],
+) -> Result<std::collections::HashMap<i64, String>> {
+    if queryids.is_empty() {
+        return Ok(std::collections::HashMap::new());
+    }
     let rows = client
         .query(
-            "SELECT query FROM pg_stat_statements(showtext := true) WHERE queryid = $1 LIMIT 1",
-            &[&queryid],
+            "SELECT queryid, query FROM pg_stat_statements(showtext := true) WHERE queryid = ANY($1)",
+            &[&queryids],
         )
         .map_err(PgprofileError::Query)?;
-    Ok(rows.into_iter().next().map(|r| r.get::<_, String>(0)))
+    Ok(rows
+        .into_iter()
+        .map(|r| (r.get::<_, i64>(0), r.get::<_, String>(1)))
+        .collect())
 }
 
 fn build_query(caps: &Capabilities) -> String {

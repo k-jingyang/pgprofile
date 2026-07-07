@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-07-07
+
+### Fixed
+- `profile`'s per-tick query-text lookups were N+1: each new `queryid` in a tick triggered its own round-trip query. Replaced with a single batched `queryid = ANY($1)` fetch per tick.
+
+### Changed
+- `--help` for `connstr` now shows an example connection string.
+
 ## [0.1.2] - 2026-07-07
 
 ### Added
