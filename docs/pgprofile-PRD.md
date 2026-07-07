@@ -29,6 +29,29 @@ DBAs and platform/application engineers diagnosing query performance during an i
 - No real bind values, no within-session timeline, no cross-instance rollup.
 - No log parsing.
 
+## Related tools
+
+- **pgBadger**: closest in spirit for "where did query time go" reports, but
+  log-based (parses `log_min_duration_statement` output), which is exactly
+  the friction (CNPG log shipping, config reloads) this project avoids.
+- **PoWA (PostgreSQL Workload Analyzer)**: continuously snapshots
+  `pg_stat_statements` (and other stats views) into a history table via a
+  background worker and extension, with a web UI for trend analysis. Heavier
+  than pgprofile: needs its own extension/worker installed and running
+  persistently, versus pgprofile's zero-install, run-and-done model.
+  Conceptually the closest match (delta accumulation over
+  `pg_stat_statements`), just architected as an always-on service instead of
+  an ephemeral CLI.
+- **pg_stat_monitor** (Percona): a `pg_stat_statements` replacement/superset
+  with time-bucketed histograms built in, but requires swapping the
+  extension itself (`shared_preload_libraries`), not just reading the
+  existing one.
+- **pgcenter**: a `top`-style live dashboard over various stats views, not
+  delta-accumulated reporting over a bounded window.
+- **pganalyze / pghero**: hosted or web-app products, continuous monitoring
+  rather than a lightweight CLI pointed at a cluster for a single capture
+  session.
+
 ## Functional requirements
 
 - Connect via a single connection string.
