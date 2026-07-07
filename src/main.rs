@@ -17,11 +17,16 @@ struct Cli {
     command: Command,
 }
 
+const CONNSTR_HELP: &str = "Postgres connection string
+
+Examples:
+  postgres://user:password@host:5432/dbname";
+
 #[derive(Subcommand)]
 enum Command {
     /// Connect, introspect pg_stat_statements columns, display raw data
     Query {
-        /// Postgres connection string
+        #[arg(help = "Postgres connection string", long_help = CONNSTR_HELP)]
         connstr: String,
         /// Show available columns only
         #[arg(long)]
@@ -32,7 +37,7 @@ enum Command {
     },
     /// Start capture, sample pg_stat_statements, render report
     Profile {
-        /// Postgres connection string
+        #[arg(help = "Postgres connection string", long_help = CONNSTR_HELP)]
         connstr: String,
         /// Capture duration (e.g. 5m, 30s); Ctrl-C stops capture early
         #[arg(long, value_parser = parse_duration)]
@@ -49,7 +54,7 @@ enum Command {
     },
     /// Quick cluster info: server version, pg_stat_statements, capability ladder
     Info {
-        /// Postgres connection string
+        #[arg(help = "Postgres connection string", long_help = CONNSTR_HELP)]
         connstr: String,
     },
 }
